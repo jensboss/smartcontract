@@ -12,7 +12,7 @@
     <div id="app" class="container">
         <div class="content">
             <h1>Merry Christmas</h1>
-            <p>Smart contract: <a :href="'https://goerli.etherscan.io/address/' + address" target="_blank">{{ address }}</a></p>
+            <p>Smart contract: <a :href="'https://etherscan.io/address/' + address" target="_blank">{{ address }}</a></p>
             <p><span class="batch" v-if="waiting > 0">Waiting for transactions being minted...</span></p>
             <ul v-if="web3Available()">
                 <li>
@@ -111,7 +111,7 @@
         createApp({
             data() {
                 return {
-                    address: "0x3EbF98b5CbEb4aBEa0c4d1E0c6B786BeaE42a435",
+                    address: "0x3F43504b43751aa5A2313D6653D8cB5660aDc217",
                     account: null,
                     contract: null,
                     personOne: null,
