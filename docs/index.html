@@ -4,19 +4,230 @@
     <meta charset="utf-8">
     <title>Relationship</title>
     <link rel="stylesheet" href="style.css">
-    <script src="script.js"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
   </head>
   <body>
-    <div class="container">
-        <div>
-            <h1>Relationship</h1>
-            <div>
-                <label for="address">Smart Contract Address:</label>
-                <input type="text" id="address" name="address">
-                <button>Search</button>
-            </div>
+    
+    <div id="app" class="container">
+        <div class="content">
+            <h1>Merry Christmas</h1>
+            <p>Smart contract: <a :href="'https://goerli.etherscan.io/address/' + address" target="_blank">{{ address }}</a></p>
+            <p><span class="batch" v-if="waiting > 0">Waiting for transactions being minted...</span></p>
+            <ul v-if="web3Available()">
+                <li>
+                    <div class="wrapper-col">
+                        <label>This relationship is between</label>
+                        <div class="wrapper-row">
+                            <span class="batch" v-if="personOneIsYou()">you</span>
+                            <input type="text" v-model="personOne" readonly></input>
+                        </div>
+                    </div>
+                </li>
+                <li>
+                    <div class="wrapper-col">
+                        <label>and</label> 
+                        <div class="wrapper-row">
+                            <span class="batch" v-if="personTwoIsYou()">you</span>
+                            <input type="text" v-model="personTwo" readonly></input>
+                        </div>
+                    </div>
+                </li>
+                <li>
+                    <div class="wrapper-col">
+                        <label>Relationship description:</label> 
+                        <input type="text" v-model="relationshipDescription" :readonly="!((personTwoIsYou() || personOneIsYou()) && active)"></input>
+                        <button v-if="(personTwoIsYou() || personOneIsYou()) && active" @click="update" :disabled="waiting>0">Submit</button>
+                    </div>
+                    
+                </li>
+                <li>
+                    <div class="wrapper-col">
+                        <label>Agreement status:</label> 
+                        <input type="text" v-model="agreedByPersonTwo" readonly></input>
+                        <button v-if="personTwoIsYou()" @click="agree" :disabled="waiting>0">Agree</button>
+                    </div>
+                </li>
+                <li>
+                    
+                    <div class="wrapper-col">
+                        <label>Active:</label> 
+                        <input type="text" v-model="active" readonly></input>
+                        <button v-if="(personTwoIsYou() || personOneIsYou()) && active" @click="disactivate" :disabled="waiting>0">End relationship</button>
+                    </div>
+                </li>
+            </ul>
+
+            <p v-if="!web3Available()">
+                This is a Web3-enabled website for interacting with the above smart contract. 
+                To use this website, install for example MetaMask.
+            </p>
         </div>
         
     </div>
+
   </body>
+  
+    
+
+    <script>
+        const { createApp } = Vue
+
+        if (typeof ethereum !== "undefined") {
+            ethereum.on('accountsChanged', (accounts) => {
+                // Handle the new accounts, or lack thereof.
+                // "accounts" will always be an array, but it can be empty.
+                window.location.reload();
+            });
+        }
+
+        if (typeof ethereum !== "undefined") {
+            window.ethereum.on('chainChanged', (chainId) => {
+                // Handle the new chain.
+                // Correctly handling chain changes can be complicated.
+                // We recommend reloading the page unless you have good reason not to.
+                window.location.reload();
+            });
+        }
+
+        function loadWeb3() {
+            window.web3 = new Web3(ethereum);
+        }
+
+        async function loadContract(address) {
+            if (window.web3) {
+                let abi = [{"inputs":[{"internalType":"address","name":"_personTwo","type":"address"},{"internalType":"string","name":"_relationshipDescription","type":"string"}],"stateMutability":"nonpayable","type":"constructor"},{"inputs":[],"name":"active","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"agree","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"agreedByPersonTwo","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"disactivate","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"personOne","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"personTwo","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"relationshipDescription","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"_newRelationshipDescription","type":"string"}],"name":"update","outputs":[],"stateMutability":"nonpayable","type":"function"}];
+                return  await new window.web3.eth.Contract(abi, address);
+            } else {
+                console.log('Web3 not available.')
+            }
+        }
+
+        async function getCurrentAccount() {
+            const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+            return accounts[0];
+        }
+
+        createApp({
+            data() {
+                return {
+                    address: "0x3EbF98b5CbEb4aBEa0c4d1E0c6B786BeaE42a435",
+                    account: null,
+                    contract: null,
+                    personOne: null,
+                    personTwo: null,
+                    relationshipDescription: null,
+                    agreedByPersonTwo: null,
+                    active: null,
+                    waiting: 0,
+                }
+            },
+            methods: {
+                web3Available() {
+                    if (typeof ethereum !== 'undefined') {
+                        return true
+                    } else {
+                        return false
+                    }
+                },
+                personOneIsYou() {
+                    if (this.personOne == null){
+                        return false
+                    }
+                    const ret = this.account === this.personOne.toLowerCase();
+                    return ret;
+                },
+                personTwoIsYou() {
+                    if (this.personTwo == null){
+                        return false
+                    }
+                    const ret = this.account === this.personTwo.toLowerCase();
+                    return ret;
+                },
+                agree() {
+                    console.log("Agreeing to contract!");
+                    this.waiting++;
+                    this.contract.methods.agree().send({from:this.account})
+                        .then((result)=> {
+                            console.log(result);
+                            this.waiting--;
+                            this.readAllStates()
+                        })
+                        .catch((error) => {
+                            console.error(error);
+                            this.waiting--;
+                        });
+                },
+                disactivate() {
+                    console.log("Ending relationship!");
+                    this.waiting++;
+                    this.contract.methods.disactivate().send({from:this.account})
+                        .then((result)=> {
+                            console.log(result);
+                            this.waiting--;
+                            this.readAllStates()
+                        })
+                        .catch((error) => {
+                            console.error(error);
+                            this.waiting--;
+                        });
+                },
+                update() {
+                    console.log("Updating relationship!");
+                    this.waiting++;
+                    this.contract.methods.update(this.relationshipDescription).send({from:this.account})
+                        .then((result)=> {
+                            console.log(result);
+                            this.waiting--;
+                            this.readAllStates()
+                        })
+                        .catch((error) => {
+                            console.error(error);
+                            this.waiting--;
+                        });
+                },
+                readAllStates() {
+                    this.contract.methods.personOne().call()
+                        .then((result)=> {
+                            this.personOne = result;
+                            console.log(result);
+                        })
+                        .catch((error) => console.error(error));
+                    this.contract.methods.personTwo().call()
+                        .then((result)=> {
+                            this.personTwo = result;
+                            console.log(result);
+                        })
+                        .catch((error) => console.error(error));
+                    this.contract.methods.relationshipDescription().call()
+                        .then((result)=> {
+                            this.relationshipDescription = result;
+                            console.log(result);
+                        })
+                        .catch((error) => console.error(error));
+                    this.contract.methods.agreedByPersonTwo().call()
+                        .then((result)=> {
+                            this.agreedByPersonTwo = result;
+                            console.log(result);
+                        })
+                        .catch((error) => console.error(error));
+                    this.contract.methods.active().call()
+                        .then((result)=> {
+                            this.active = result;
+                            console.log(result);
+                        })
+                        .catch((error) => console.error(error));
+                }
+            },
+            async mounted() {
+                if (typeof ethereum !== 'undefined') {
+                    loadWeb3();
+                    this.account = await getCurrentAccount();
+                    this.contract = await loadContract(this.address);
+                    // load states
+                    this.readAllStates();
+                } 
+            },
+        }).mount('#app')
+    </script>
 </html>
